@@ -16,26 +16,23 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        /* Efek getar untuk peringatan kemahalan */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
             20%, 40%, 60%, 80% { transform: translateX(4px); }
         }
         
-        /* Menyembunyikan scrollbar tapi tetap bisa di-scroll */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans md:py-6">
-    <!-- Wadah untuk Aplikasi React -->
     <div id="root"></div>
 
-    <!-- Script Utama Aplikasi React -->
     <script type="text/babel">
         // Mengambil fungsi-fungsi dasar dari React Global
-        const { useState, useMemo, useEffect } = React;
+        // Ditambahkan useDeferredValue untuk membuat pengetikan pencarian anti-lag
+        const { useState, useMemo, useEffect, useDeferredValue } = React;
 
         // ==========================================
         // KOMPONEN IKON
@@ -55,7 +52,7 @@
         const IconSettings = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 
         // ==========================================
-        // 1. PENGATURAN 2 SUMBER DATA SPREADSHEET TERPISAH
+        // 1. PENGATURAN SUMBER DATA SPREADSHEET
         // ==========================================
         const DATA_SOURCES = [
           {
@@ -77,23 +74,16 @@
         ];
 
         // ==========================================
-        // 2. DATA CONTOH (Hanya muncul jika gagal membaca struktur Spreadsheet)
+        // 2. DATA CONTOH (Hanya muncul jika gagal)
         // ==========================================
         const fallbackData = {
-          ssh_umum: [
-             { id: 'err1', uraian: 'Gagal memuat data dari Spreadsheet SSH Umum. Pastikan baris pertama Excel Anda berisi judul kolom.', harga: 0 }
-          ],
-          ssh_pbj: [
-            { id: 'err2', uraian: 'Gagal memuat data dari Spreadsheet SSH PBJ. Pastikan baris pertama Excel Anda berisi judul kolom.', harga: 0 }
-          ]
+          ssh_umum: [{ id: 'err1', uraian: 'Gagal memuat data dari Spreadsheet SSH Umum. Pastikan baris pertama Excel Anda berisi judul kolom.', harga: 0 }],
+          ssh_pbj: [{ id: 'err2', uraian: 'Gagal memuat data dari Spreadsheet SSH PBJ. Pastikan baris pertama Excel Anda berisi judul kolom.', harga: 0 }]
         };
 
-        // ==========================================
-        // 3. PENGATURAN IDENTITAS APLIKASI
-        // ==========================================
         const APP_IDENTITY = {
           logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ce/Lambang_Kabupaten_Pringsewu.webp/300px-Lambang_Kabupaten_Pringsewu.webp.png", 
-          developerName: "[Nama Anda]", // <-- JANGAN LUPA GANTI DENGAN NAMA ANDA
+          developerName: "[Nama Anda]", // <-- GANTI DENGAN NAMA ANDA
           year: "2025"
         };
 
@@ -104,12 +94,17 @@
           const [error, setError] = useState(null);
           
           const [searchTerm, setSearchTerm] = useState('');
+          // Menggunakan DeferredValue agar pengetikan tidak freeze meski mencari 10.000 data
+          const deferredSearchTerm = useDeferredValue(searchTerm); 
           const [selectedCategory, setSelectedCategory] = useState('Semua');
           
           const [sourceUrls, setSourceUrls] = useState({
             ssh_umum: DATA_SOURCES[0].defaultUrl,
             ssh_pbj: DATA_SOURCES[1].defaultUrl
           });
+          
+          const [cachedData, setCachedData] = useState({});
+          const [displayLimit, setDisplayLimit] = useState(50);
           
           const [isAdmin, setIsAdmin] = useState(false);
           const [showPinModal, setShowPinModal] = useState(false);
@@ -119,18 +114,22 @@
           const [selectedItem, setSelectedItem] = useState(null);
           const [inputValue, setInputValue] = useState(''); 
 
-          // Ambil kategori hanya jika ada di database, berguna untuk filter
           const categories = ['Semua', ...Array.from(new Set(dbData.map(item => item.kategori).filter(Boolean)))];
           
-          // Kolom standar & Kolom yang diabaikan (Tidak akan dimunculkan sebagai label)
           const standardKeys = ['id', 'uraian', 'harga', 'kategori', 'satuan'];
-          const ignoredKeys = [...standardKeys, 'no', 'nomor', 'nomor_urut', 'no.']; // Mencegah "No" muncul
+          const ignoredKeys = [...standardKeys, 'no', 'nomor', 'nomor_urut', 'no.']; 
 
-          const fetchSpreadsheetData = async (source) => {
+          const fetchSpreadsheetData = async (source, forceRefresh = false) => {
             setIsLoading(true);
             setError(null);
-            setDbData([]); 
             
+            if (!forceRefresh && cachedData[source.id]) {
+              setDbData(cachedData[source.id]);
+              setIsLoading(false);
+              return;
+            }
+
+            setDbData([]); 
             const currentUrl = sourceUrls[source.id];
 
             if (!currentUrl) {
@@ -147,10 +146,11 @@
               const csvText = await response.text();
               
               const parsedData = parseCSV(csvText, source.id);
+              setCachedData(prev => ({ ...prev, [source.id]: parsedData })); 
               setDbData(parsedData);
             } catch (err) {
               console.error(err);
-              setError('Gagal memuat dari Google Sheet. Periksa koneksi internet Anda. Menampilkan pesan sistem.');
+              setError('Gagal memuat dari Google Sheet. Periksa koneksi internet Anda.');
               setDbData(fallbackData[source.id]);
             } finally {
               setIsLoading(false);
@@ -160,44 +160,59 @@
           useEffect(() => {
             setSearchTerm('');
             setSelectedCategory('Semua');
+            setDisplayLimit(50); 
             fetchSpreadsheetData(activeSource);
           }, [activeSource]);
 
-          // ==========================================
-          // MESIN PEMBACA CERDAS (SUPER SMART PARSER)
-          // ==========================================
-          const parseCSV = (str, sourceId) => {
-            if (!str || str.trim() === '') return fallbackData[sourceId];
-            
-            // 1. Deteksi Delimiter (Pemisah Koma vs Titik Koma)
-            const firstLine = str.split('\n')[0];
-            let delimiter = ',';
-            if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) delimiter = ';';
-            if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length) delimiter = '\t';
+          useEffect(() => {
+            setDisplayLimit(50);
+          }, [deferredSearchTerm, selectedCategory]);
 
-            // 2. Mengurai CSV mentah
-            const arr = [];
-            let quote = false;
-            let row = 0, col = 0;
-            for (let c = 0; c < str.length; c++) {
-              let cc = str[c], nc = str[c+1];
-              arr[row] = arr[row] || [];
-              arr[row][col] = arr[row][col] || '';
-              if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
-              if (cc === '"') { quote = !quote; continue; }
-              if (cc === delimiter && !quote) { ++col; continue; }
-              if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
-              if (cc === '\n' && !quote) { ++row; col = 0; continue; }
-              if (cc === '\r' && !quote) { ++row; col = 0; continue; }
-              arr[row][col] += cc;
-            }
+          // ==========================================
+          // MESIN PEMBACA TURBO (SUPER FAST PARSER)
+          // Diganti menjadi metode substring untuk memuat ribuan baris secara instan
+          // ==========================================
+          const parseCSV = (text, sourceId) => {
+            if (!text || text.trim() === '') return fallbackData[sourceId];
             
+            const result = [];
+            let startValueBnd = 0;
+            let inQuotes = false;
+            let row = [];
+            
+            // Loop canggih (O(N)) yang sangat efisien untuk memori
+            for (let i = 0; i < text.length; i++) {
+                let cc = text[i];
+                if (cc === '"') {
+                    inQuotes = !inQuotes;
+                } else if (cc === ',' && !inQuotes) {
+                    let val = text.substring(startValueBnd, i);
+                    if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1).replace(/""/g, '"');
+                    row.push(val);
+                    startValueBnd = i + 1;
+                } else if (cc === '\n' && !inQuotes) {
+                    let val = text.substring(startValueBnd, i);
+                    if (val.endsWith('\r')) val = val.substring(0, val.length - 1);
+                    if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1).replace(/""/g, '"');
+                    row.push(val);
+                    result.push(row);
+                    row = [];
+                    startValueBnd = i + 1;
+                }
+            }
+            if (startValueBnd < text.length) {
+                let val = text.substring(startValueBnd);
+                if (val.endsWith('\r')) val = val.substring(0, val.length - 1);
+                if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1).replace(/""/g, '"');
+                row.push(val);
+                result.push(row);
+            }
+
+            const arr = result;
             if (arr.length < 2) return fallbackData[sourceId];
             
-            // 3. Membersihkan Header Kolom (Baris pertama)
             const rawHeaders = arr[0].map(h => h.trim().toLowerCase().replace(/[\n\r]/g, ''));
             
-            // 4. MENEBAK KOLOM SECARA CERDAS 
             let idxUraian = rawHeaders.findIndex(h => h === 'uraian' || h === 'uraian_barang' || h === 'nama_barang' || h.includes('uraian') || h.includes('nama') || h.includes('barang') || h.includes('pekerjaan') || h.includes('jenis'));
             let idxHarga = rawHeaders.findIndex(h => h === 'harga' || h.includes('harga') || h.includes('tarif') || h.includes('biaya') || h.includes('nilai') || h.includes('pagu') || h.includes('besaran') || h.includes('rp'));
             let idxKategori = rawHeaders.findIndex(h => h === 'kategori' || h.includes('kategori') || h.includes('kelompok') || h.includes('bidang'));
@@ -206,7 +221,6 @@
             if (idxUraian === -1) idxUraian = rawHeaders.length > 1 ? 1 : 0; 
             if (idxHarga === -1) idxHarga = rawHeaders.length - 1; 
             
-            // Mengganti nama header asli dengan nama standar (Mencegah nama kolom dobel)
             const headers = rawHeaders.map((h, i) => {
                 if (i === idxUraian) return 'uraian';
                 if (i === idxHarga) return 'harga';
@@ -217,12 +231,10 @@
 
             const dataObjects = [];
             
-            // 5. Menyusun Data per Baris
             for (let i = 1; i < arr.length; i++) {
               if (arr[i].length === 1 && !arr[i][0]) continue; 
               
               const obj = { id: `row-${i}` };
-              
               headers.forEach((header, index) => {
                 let val = arr[i][index] ? arr[i][index].trim() : '';
                 if (header === 'harga') {
@@ -241,19 +253,22 @@
           };
 
           const filteredData = useMemo(() => {
+            if (!dbData || dbData.length === 0) return [];
             return dbData.filter(item => {
-              const searchLower = searchTerm.toLowerCase();
+              const searchLower = deferredSearchTerm.toLowerCase();
               const matchSearch = Object.values(item).some(val => 
                 String(val).toLowerCase().includes(searchLower)
               );
               const matchCategory = activeSource.id === 'ssh_pbj' || selectedCategory === 'Semua' || item.kategori === selectedCategory;
               return matchSearch && matchCategory;
             });
-          }, [dbData, searchTerm, selectedCategory, activeSource]);
+          }, [dbData, deferredSearchTerm, selectedCategory, activeSource]);
 
           const formatRupiah = (angka) => {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
           };
+
+          const displayedData = filteredData.slice(0, displayLimit);
 
           const openModal = (item) => {
             if (item.id.startsWith('err')) return; 
@@ -282,7 +297,6 @@
               <header className={`${colorTheme.bg} text-white p-4 md:pt-6 sticky top-0 z-20 shadow-md transition-colors duration-300`}>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-3">
-                    {/* LOGO APLIKASI */}
                     <img 
                       src={APP_IDENTITY.logoUrl} 
                       alt="Logo Pringsewu" 
@@ -314,7 +328,7 @@
                     
                     {isAdmin && (
                       <button 
-                        onClick={() => fetchSpreadsheetData(activeSource)} 
+                        onClick={() => fetchSpreadsheetData(activeSource, true)} 
                         className="p-2 bg-white/20 rounded-full hover:bg-white/30 active:scale-95 transition-all"
                         title="Sinkronisasi Data"
                       >
@@ -324,7 +338,6 @@
                   </div>
                 </div>
 
-                {/* TAB SWITCHER */}
                 <div className="flex bg-black/20 p-1 rounded-xl">
                   {DATA_SOURCES.map((source) => (
                     <button
@@ -345,7 +358,6 @@
                   ))}
                 </div>
 
-                {/* SEARCH BAR */}
                 <div className="mt-4 relative">
                   <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
                   <input
@@ -358,7 +370,6 @@
                 </div>
               </header>
 
-              {/* ERROR BANNER */}
               {error && (
                 <div className="m-4 mb-0 bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start gap-2">
                   <IconAlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
@@ -366,10 +377,17 @@
                 </div>
               )}
 
-              {/* CONTENT AREA */}
               <div className="p-4 flex-grow">
                 <div className="flex justify-between items-center mb-3">
-                  <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Hasil Pencarian</h2>
+                  {/* PENAMBAHAN INFO JUMLAH ITEM DITEMUKAN */}
+                  <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                    Hasil Pencarian 
+                    {!isLoading && (
+                      <span className="text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full text-[10px] font-black lowercase normal-case">
+                        {filteredData.length} item
+                      </span>
+                    )}
+                  </h2>
                   
                   {activeSource.id !== 'ssh_pbj' && (
                     <select
@@ -398,10 +416,8 @@
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredData.map((item) => {
-                      // Mengambil kolom keterangan dan mengabaikan No/Nomor
+                    {displayedData.map((item) => {
                       const extraKeys = Object.keys(item).filter(key => !ignoredKeys.includes(key.toLowerCase()) && item[key]);
-                      
                       const isErrorItem = item.id.startsWith('err');
 
                       return (
@@ -426,7 +442,6 @@
                           
                           <h3 className={`text-sm font-bold leading-snug mb-2 ${isErrorItem ? 'text-red-500' : 'text-slate-800'}`}>{item.uraian}</h3>
                           
-                          {/* TABEL SPESIFIKASI AUDITOR (Keterangan Ekstra) */}
                           {extraKeys.length > 0 && (
                             <div className="flex flex-col gap-1.5 mt-2 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
                               {extraKeys.map(key => (
@@ -453,17 +468,24 @@
                         </button>
                       );
                     })}
+                    
+                    {filteredData.length > displayLimit && (
+                      <button
+                        onClick={() => setDisplayLimit(prev => prev + 50)}
+                        className={`w-full py-3 mt-4 rounded-xl font-bold text-sm border-2 border-dashed ${colorTheme.text} border-slate-300 bg-white hover:bg-slate-50 transition-colors flex justify-center items-center gap-2`}
+                      >
+                        Tampilkan Lebih Banyak ({filteredData.length - displayLimit} tersisa)
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* FOOTER COPYRIGHT */}
               <footer className="p-4 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
                 <p className="font-medium text-slate-500">© {APP_IDENTITY.year} Si-PAS Pringsewu</p>
                 <p className="mt-0.5">Dikembangkan oleh <span className="font-bold text-slate-700">{APP_IDENTITY.developerName}</span></p>
               </footer>
               
-              {/* MODAL CEK HARGA */}
               {selectedItem && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
                   <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={closeModal}></div>
@@ -484,7 +506,6 @@
                         {selectedItem.kategori && <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{selectedItem.kategori}</p>}
                         <h2 className="text-lg font-black text-slate-900 leading-tight mb-2">{selectedItem.uraian}</h2>
                         
-                        {/* TABEL SPESIFIKASI DI DALAM MODAL */}
                         {Object.keys(selectedItem).filter(k => !ignoredKeys.includes(k.toLowerCase()) && selectedItem[k]).length > 0 && (
                           <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-4 max-h-48 overflow-y-auto no-scrollbar">
                             {Object.keys(selectedItem).filter(k => !ignoredKeys.includes(k.toLowerCase()) && selectedItem[k]).map(key => (
@@ -558,7 +579,6 @@
                 </div>
               )}
 
-              {/* MODAL PIN ADMIN */}
               {showPinModal && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                   <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowPinModal(false)}></div>
@@ -601,7 +621,6 @@
                 </div>
               )}
 
-              {/* MODAL PENGATURAN ADMIN */}
               {showAdminPanel && isAdmin && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
                   <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAdminPanel(false)}></div>
@@ -641,7 +660,7 @@
 
                     <button
                       onClick={() => {
-                        fetchSpreadsheetData(activeSource);
+                        fetchSpreadsheetData(activeSource, true);
                         setShowAdminPanel(false);
                       }}
                       className="w-full flex items-center justify-center gap-2 bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 active:scale-95 transition-all"
@@ -656,7 +675,6 @@
           );
         }
 
-        // Render Aplikasi
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
