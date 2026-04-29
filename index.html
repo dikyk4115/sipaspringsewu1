@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Si-PAS Pringsewu</title>
+    
+    <!-- Memuat Tailwind CSS untuk Desain -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Memuat Library React secara Global -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Memuat Babel untuk menerjemahkan React di dalam Browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* Efek getar untuk peringatan kemahalan */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        
+        /* Menyembunyikan scrollbar tapi tetap bisa di-scroll */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans md:py-6">
+    <!-- Wadah untuk Aplikasi React -->
+    <div id="root"></div>
+
+    <!-- Script Utama Aplikasi React -->
+    <script type="text/babel">
+        // Mengambil fungsi-fungsi dasar dari React Global
+        const { useState, useMemo, useEffect } = React;
+
+        // ==========================================
+        // KOMPONEN IKON
+        // ==========================================
+        const IconSearch = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+        const IconAlertCircle = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
+        const IconCheckCircle = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+        const IconRefreshCw = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+        const IconFilter = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+        const IconFileSpreadsheet = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>;
+        const IconBox = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>;
+        const IconX = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+        const IconChevronRight = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="9 18 15 12 9 6"/></svg>;
+        const IconInfo = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
+        const IconLock = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+        const IconKeyRound = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg>;
+        const IconSettings = ({size=18, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+
+        // ==========================================
+        // 1. PENGATURAN 2 SUMBER DATA SPREADSHEET TERPISAH
+        // ==========================================
+        const DATA_SOURCES = [
+          {
+            id: 'ssh_umum',
+            name: 'SSH Umum',
+            desc: 'Perbup Pringsewu No. 8 Tahun 2025',
+            icon: <IconFileSpreadsheet size={18} />,
+            color: 'emerald',
+            defaultUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRJvSGpfcrTZVZihgQj2dtxW8PyzlxOQFOlkOCl-E9enPZDwbzhhu-bWN9kld7ofGYhHPCcNVZ8h2gN/pub?output=csv' 
+          },
+          {
+            id: 'ssh_pbj',
+            name: 'SSH PBJ',
+            desc: 'Perbup Pringsewu No. 8 Tahun 2025',
+            icon: <IconBox size={18} />,
+            color: 'blue',
+            defaultUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSTfn7TVU3J4wwmyWH_DQ_XQQr3FPkIKmUb3O_RfVUrl1-Dt28t9F-_mamcRFxmy3ij4dMmBQrD0lP9/pub?output=csv'
+          }
+        ];
+
+        // ==========================================
+        // 2. DATA CONTOH (Hanya muncul jika gagal membaca struktur Spreadsheet)
+        // ==========================================
+        const fallbackData = {
+          ssh_umum: [
+             { id: 'err1', uraian: 'Gagal memuat data dari Spreadsheet SSH Umum. Pastikan baris pertama Excel Anda berisi judul kolom.', harga: 0 }
+          ],
+          ssh_pbj: [
+            { id: 'err2', uraian: 'Gagal memuat data dari Spreadsheet SSH PBJ. Pastikan baris pertama Excel Anda berisi judul kolom.', harga: 0 }
+          ]
+        };
+
+        // ==========================================
+        // 3. PENGATURAN IDENTITAS APLIKASI
+        // ==========================================
+        const APP_IDENTITY = {
+          logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ce/Lambang_Kabupaten_Pringsewu.webp/300px-Lambang_Kabupaten_Pringsewu.webp.png", 
+          developerName: "[Nama Anda]", // <-- JANGAN LUPA GANTI DENGAN NAMA ANDA
+          year: "2025"
+        };
+
+        function App() {
+          const [activeSource, setActiveSource] = useState(DATA_SOURCES[0]);
+          const [dbData, setDbData] = useState([]);
+          const [isLoading, setIsLoading] = useState(true);
+          const [error, setError] = useState(null);
+          
+          const [searchTerm, setSearchTerm] = useState('');
+          const [selectedCategory, setSelectedCategory] = useState('Semua');
+          
+          const [sourceUrls, setSourceUrls] = useState({
+            ssh_umum: DATA_SOURCES[0].defaultUrl,
+            ssh_pbj: DATA_SOURCES[1].defaultUrl
+          });
+          
+          const [isAdmin, setIsAdmin] = useState(false);
+          const [showPinModal, setShowPinModal] = useState(false);
+          const [showAdminPanel, setShowAdminPanel] = useState(false);
+          const [pinInput, setPinInput] = useState('');
+
+          const [selectedItem, setSelectedItem] = useState(null);
+          const [inputValue, setInputValue] = useState(''); 
+
+          // Ambil kategori hanya jika ada di database, berguna untuk filter
+          const categories = ['Semua', ...Array.from(new Set(dbData.map(item => item.kategori).filter(Boolean)))];
+          
+          // Kolom standar & Kolom yang diabaikan (Tidak akan dimunculkan sebagai label)
+          const standardKeys = ['id', 'uraian', 'harga', 'kategori', 'satuan'];
+          const ignoredKeys = [...standardKeys, 'no', 'nomor', 'nomor_urut', 'no.']; // Mencegah "No" muncul
+
+          const fetchSpreadsheetData = async (source) => {
+            setIsLoading(true);
+            setError(null);
+            setDbData([]); 
+            
+            const currentUrl = sourceUrls[source.id];
+
+            if (!currentUrl) {
+              setTimeout(() => {
+                setDbData(fallbackData[source.id]);
+                setIsLoading(false);
+              }, 500);
+              return;
+            }
+
+            try {
+              const response = await fetch(currentUrl);
+              if (!response.ok) throw new Error('Gagal mengambil data dari Google Sheet');
+              const csvText = await response.text();
+              
+              const parsedData = parseCSV(csvText, source.id);
+              setDbData(parsedData);
+            } catch (err) {
+              console.error(err);
+              setError('Gagal memuat dari Google Sheet. Periksa koneksi internet Anda. Menampilkan pesan sistem.');
+              setDbData(fallbackData[source.id]);
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          useEffect(() => {
+            setSearchTerm('');
+            setSelectedCategory('Semua');
+            fetchSpreadsheetData(activeSource);
+          }, [activeSource]);
+
+          // ==========================================
+          // MESIN PEMBACA CERDAS (SUPER SMART PARSER)
+          // ==========================================
+          const parseCSV = (str, sourceId) => {
+            if (!str || str.trim() === '') return fallbackData[sourceId];
+            
+            // 1. Deteksi Delimiter (Pemisah Koma vs Titik Koma)
+            const firstLine = str.split('\n')[0];
+            let delimiter = ',';
+            if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) delimiter = ';';
+            if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length) delimiter = '\t';
+
+            // 2. Mengurai CSV mentah
+            const arr = [];
+            let quote = false;
+            let row = 0, col = 0;
+            for (let c = 0; c < str.length; c++) {
+              let cc = str[c], nc = str[c+1];
+              arr[row] = arr[row] || [];
+              arr[row][col] = arr[row][col] || '';
+              if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
+              if (cc === '"') { quote = !quote; continue; }
+              if (cc === delimiter && !quote) { ++col; continue; }
+              if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
+              if (cc === '\n' && !quote) { ++row; col = 0; continue; }
+              if (cc === '\r' && !quote) { ++row; col = 0; continue; }
+              arr[row][col] += cc;
+            }
+            
+            if (arr.length < 2) return fallbackData[sourceId];
+            
+            // 3. Membersihkan Header Kolom (Baris pertama)
+            const rawHeaders = arr[0].map(h => h.trim().toLowerCase().replace(/[\n\r]/g, ''));
+            
+            // 4. MENEBAK KOLOM SECARA CERDAS 
+            let idxUraian = rawHeaders.findIndex(h => h === 'uraian' || h === 'uraian_barang' || h === 'nama_barang' || h.includes('uraian') || h.includes('nama') || h.includes('barang') || h.includes('pekerjaan') || h.includes('jenis'));
+            let idxHarga = rawHeaders.findIndex(h => h === 'harga' || h.includes('harga') || h.includes('tarif') || h.includes('biaya') || h.includes('nilai') || h.includes('pagu') || h.includes('besaran') || h.includes('rp'));
+            let idxKategori = rawHeaders.findIndex(h => h === 'kategori' || h.includes('kategori') || h.includes('kelompok') || h.includes('bidang'));
+            let idxSatuan = rawHeaders.findIndex(h => h === 'satuan' || h.includes('satuan'));
+            
+            if (idxUraian === -1) idxUraian = rawHeaders.length > 1 ? 1 : 0; 
+            if (idxHarga === -1) idxHarga = rawHeaders.length - 1; 
+            
+            // Mengganti nama header asli dengan nama standar (Mencegah nama kolom dobel)
+            const headers = rawHeaders.map((h, i) => {
+                if (i === idxUraian) return 'uraian';
+                if (i === idxHarga) return 'harga';
+                if (i === idxKategori) return 'kategori';
+                if (i === idxSatuan) return 'satuan';
+                return h.replace(/ /g, '_') || `kolom_tanpa_judul_${i}`;
+            });
+
+            const dataObjects = [];
+            
+            // 5. Menyusun Data per Baris
+            for (let i = 1; i < arr.length; i++) {
+              if (arr[i].length === 1 && !arr[i][0]) continue; 
+              
+              const obj = { id: `row-${i}` };
+              
+              headers.forEach((header, index) => {
+                let val = arr[i][index] ? arr[i][index].trim() : '';
+                if (header === 'harga') {
+                   val = val ? parseInt(val.replace(/[^0-9]/g, ''), 10) : 0;
+                   if (isNaN(val)) val = 0;
+                }
+                obj[header] = val;
+              });
+              
+              if (obj.uraian && obj.uraian.length > 0) {
+                 dataObjects.push(obj);
+              }
+            }
+            
+            return dataObjects.length > 0 ? dataObjects : fallbackData[sourceId];
+          };
+
+          const filteredData = useMemo(() => {
+            return dbData.filter(item => {
+              const searchLower = searchTerm.toLowerCase();
+              const matchSearch = Object.values(item).some(val => 
+                String(val).toLowerCase().includes(searchLower)
+              );
+              const matchCategory = activeSource.id === 'ssh_pbj' || selectedCategory === 'Semua' || item.kategori === selectedCategory;
+              return matchSearch && matchCategory;
+            });
+          }, [dbData, searchTerm, selectedCategory, activeSource]);
+
+          const formatRupiah = (angka) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka || 0);
+          };
+
+          const openModal = (item) => {
+            if (item.id.startsWith('err')) return; 
+            setSelectedItem(item);
+            setInputValue('');
+          };
+
+          const closeModal = () => {
+            setSelectedItem(null);
+            setInputValue('');
+          };
+
+          const handleInputModalChange = (e) => {
+            const numericValue = e.target.value.replace(/[^0-9]/g, '');
+            setInputValue(numericValue);
+          };
+
+          const colorTheme = activeSource.color === 'emerald' 
+            ? { bg: 'bg-emerald-600', text: 'text-emerald-700', bgLight: 'bg-emerald-50', border: 'border-emerald-200' }
+            : { bg: 'bg-blue-600', text: 'text-blue-700', bgLight: 'bg-blue-50', border: 'border-blue-200' };
+
+          return (
+            <div className="max-w-lg mx-auto bg-slate-50 min-h-screen md:min-h-[90vh] md:rounded-3xl shadow-2xl overflow-hidden relative flex flex-col">
+              
+              {/* HEADER FIXED */}
+              <header className={`${colorTheme.bg} text-white p-4 md:pt-6 sticky top-0 z-20 shadow-md transition-colors duration-300`}>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex items-center gap-3">
+                    {/* LOGO APLIKASI */}
+                    <img 
+                      src={APP_IDENTITY.logoUrl} 
+                      alt="Logo Pringsewu" 
+                      className="h-11 w-auto drop-shadow-sm" 
+                      onError={(e) => { 
+                        e.target.onerror = null; 
+                        e.target.src = "https://via.placeholder.com/150/059669/ffffff?text=Logo"; 
+                      }} 
+                    />
+                    <div>
+                      <h1 className="text-xl font-black tracking-tight leading-tight">
+                        Si-PAS Pringsewu
+                      </h1>
+                      <p className="text-[10px] text-white/80 mt-0.5 leading-snug">Sistem Penelusuran Akurat Standar Satuan Harga Pringsewu</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        if (isAdmin) setShowAdminPanel(true);
+                        else setShowPinModal(true);
+                      }} 
+                      className="p-2 bg-white/10 rounded-full hover:bg-white/20 active:scale-95 transition-all"
+                      title="Pengaturan Admin"
+                    >
+                      {isAdmin ? <IconSettings size={18} /> : <IconLock size={18} />}
+                    </button>
+                    
+                    {isAdmin && (
+                      <button 
+                        onClick={() => fetchSpreadsheetData(activeSource)} 
+                        className="p-2 bg-white/20 rounded-full hover:bg-white/30 active:scale-95 transition-all"
+                        title="Sinkronisasi Data"
+                      >
+                        <IconRefreshCw size={18} className={isLoading ? "animate-spin" : ""} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* TAB SWITCHER */}
+                <div className="flex bg-black/20 p-1 rounded-xl">
+                  {DATA_SOURCES.map((source) => (
+                    <button
+                      key={source.id}
+                      onClick={() => setActiveSource(source)}
+                      className={`flex-1 flex flex-col justify-center items-center py-2 px-1 text-sm rounded-lg transition-all ${
+                        activeSource.id === source.id ? 'bg-white text-slate-800 shadow-sm' : 'text-white/80 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 font-bold">
+                        {source.icon}
+                        <span>{source.name}</span>
+                      </div>
+                      <span className={`text-[10px] mt-0.5 font-medium ${activeSource.id === source.id ? 'text-slate-500' : 'text-white/60'}`}>
+                        {source.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* SEARCH BAR */}
+                <div className="mt-4 relative">
+                  <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                  <input
+                    type="text"
+                    placeholder="Cari item, merk, atau spesifikasi..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-white text-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-white/50 text-sm shadow-inner"
+                  />
+                </div>
+              </header>
+
+              {/* ERROR BANNER */}
+              {error && (
+                <div className="m-4 mb-0 bg-amber-50 border border-amber-200 p-3 rounded-xl flex items-start gap-2">
+                  <IconAlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
+                  <p className="text-amber-700 text-xs font-medium">{error}</p>
+                </div>
+              )}
+
+              {/* CONTENT AREA */}
+              <div className="p-4 flex-grow">
+                <div className="flex justify-between items-center mb-3">
+                  <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Hasil Pencarian</h2>
+                  
+                  {activeSource.id !== 'ssh_pbj' && (
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="text-xs bg-white border border-slate-200 text-slate-600 py-1.5 px-2 rounded-lg outline-none shadow-sm"
+                    >
+                      {categories.map(cat => (
+                        <option key={cat ? cat : 'undefined'} value={cat ? cat : 'undefined'}>{cat || 'Semua'}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-20 opacity-50">
+                    <IconRefreshCw className="animate-spin text-slate-400" size={32} />
+                  </div>
+                ) : filteredData.length === 0 ? (
+                  <div className="text-center py-20">
+                    <div className="bg-slate-200 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <IconSearch size={24} className="text-slate-400" />
+                    </div>
+                    <p className="font-semibold text-slate-600">Tidak ada data</p>
+                    <p className="text-xs text-slate-400 mt-1">Coba gunakan kata kunci yang berbeda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredData.map((item) => {
+                      // Mengambil kolom keterangan dan mengabaikan No/Nomor
+                      const extraKeys = Object.keys(item).filter(key => !ignoredKeys.includes(key.toLowerCase()) && item[key]);
+                      
+                      const isErrorItem = item.id.startsWith('err');
+
+                      return (
+                        <button 
+                          key={item.id}
+                          onClick={() => openModal(item)}
+                          className={`w-full text-left bg-white p-4 rounded-2xl shadow-sm border border-slate-100 hover:border-slate-300 hover:shadow-md active:scale-[0.98] transition-all group relative overflow-hidden ${isErrorItem ? 'cursor-default opacity-80' : ''}`}
+                        >
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            {item.kategori ? (
+                              <span className="inline-block px-2 py-0.5 bg-slate-200 text-slate-600 text-[10px] uppercase font-bold rounded">
+                                {item.kategori}
+                              </span>
+                            ) : <div></div>}
+                            
+                            {item.satuan && (
+                              <span className="text-xs font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                                {item.satuan}
+                              </span>
+                            )}
+                          </div>
+                          
+                          <h3 className={`text-sm font-bold leading-snug mb-2 ${isErrorItem ? 'text-red-500' : 'text-slate-800'}`}>{item.uraian}</h3>
+                          
+                          {/* TABEL SPESIFIKASI AUDITOR (Keterangan Ekstra) */}
+                          {extraKeys.length > 0 && (
+                            <div className="flex flex-col gap-1.5 mt-2 mb-3 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                              {extraKeys.map(key => (
+                                <div key={key} className="text-xs flex items-start">
+                                  <span className="text-slate-500 font-semibold w-24 shrink-0 capitalize">{key.replace(/_/g, ' ')}</span>
+                                  <span className="text-slate-800 font-medium">: {item[key]}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {!isErrorItem && (
+                            <div className="flex justify-between items-end mt-3 border-t border-slate-100 pt-3">
+                              <div>
+                                <p className="text-[10px] text-slate-400 font-semibold uppercase mb-0.5">Tarif Maksimal</p>
+                                <p className="text-sm font-black text-slate-900">{formatRupiah(item.harga)}</p>
+                              </div>
+                              
+                              <div className={`flex items-center gap-1 text-xs font-semibold ${colorTheme.text} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                                Cek Harga <IconChevronRight size={14} />
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* FOOTER COPYRIGHT */}
+              <footer className="p-4 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
+                <p className="font-medium text-slate-500">© {APP_IDENTITY.year} Si-PAS Pringsewu</p>
+                <p className="mt-0.5">Dikembangkan oleh <span className="font-bold text-slate-700">{APP_IDENTITY.developerName}</span></p>
+              </footer>
+              
+              {/* MODAL CEK HARGA */}
+              {selectedItem && (
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={closeModal}></div>
+                  
+                  <div className="bg-white w-full max-w-lg sm:rounded-2xl rounded-t-3xl shadow-2xl relative z-10 overflow-hidden animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-100">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <IconInfo size={18} className={colorTheme.text} />
+                        Validasi Harga
+                      </h3>
+                      <button onClick={closeModal} className="p-1.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200">
+                        <IconX size={18} />
+                      </button>
+                    </div>
+
+                    <div className="p-5 pb-8">
+                      <div className="mb-6">
+                        {selectedItem.kategori && <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{selectedItem.kategori}</p>}
+                        <h2 className="text-lg font-black text-slate-900 leading-tight mb-2">{selectedItem.uraian}</h2>
+                        
+                        {/* TABEL SPESIFIKASI DI DALAM MODAL */}
+                        {Object.keys(selectedItem).filter(k => !ignoredKeys.includes(k.toLowerCase()) && selectedItem[k]).length > 0 && (
+                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 mb-4 max-h-48 overflow-y-auto no-scrollbar">
+                            {Object.keys(selectedItem).filter(k => !ignoredKeys.includes(k.toLowerCase()) && selectedItem[k]).map(key => (
+                               <div key={key} className="flex justify-between text-xs py-1.5 border-b border-slate-100/50 last:border-0">
+                                  <span className="text-slate-500 capitalize font-semibold">{key.replace(/_/g, ' ')}</span>
+                                  <span className="font-bold text-slate-800 text-right ml-2">{selectedItem[key]}</span>
+                               </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center bg-slate-800 text-white p-3 rounded-xl mt-4">
+                          <span className="text-sm font-medium opacity-80">Batas SSH ({selectedItem.satuan})</span>
+                          <span className="text-lg font-black">{formatRupiah(selectedItem.harga)}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">
+                          Input Nilai Hasil Pemeriksaan (Rp)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            autoFocus
+                            placeholder="Ketik nominal di sini..."
+                            value={inputValue ? new Intl.NumberFormat('id-ID').format(inputValue) : ''}
+                            onChange={handleInputModalChange}
+                            className={`w-full pl-11 pr-4 py-4 text-xl font-bold bg-slate-50 border-2 rounded-2xl outline-none transition-all shadow-inner ${
+                               !inputValue 
+                                 ? `border-slate-200 focus:${colorTheme.border}` 
+                                 : parseInt(inputValue) > selectedItem.harga 
+                                   ? 'border-red-400 focus:border-red-500 bg-red-50/50 text-red-900' 
+                                   : 'border-emerald-400 focus:border-emerald-500 bg-emerald-50/50 text-emerald-900'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      {inputValue !== '' && (
+                        <div className="mt-4">
+                          {parseInt(inputValue) > selectedItem.harga ? (
+                            <div className="bg-red-100 border-2 border-red-500 p-4 rounded-xl flex items-start gap-3 animate-in zoom-in-95 duration-300 shadow-[0_0_15px_rgba(239,68,68,0.3)] transform origin-center" style={{ animation: 'shake 0.5s ease-in-out' }}>
+                              <IconAlertCircle className="text-red-600 shrink-0 animate-pulse" size={28} />
+                              <div>
+                                <h4 className="font-black text-red-700 text-base uppercase tracking-wide">Peringatan! Kemahalan!</h4>
+                                <p className="text-red-600 text-sm font-medium mt-0.5 leading-snug">
+                                  Harga usulan Anda melebihi standar SSH sebesar <b>{formatRupiah(parseInt(inputValue) - selectedItem.harga)}</b>. Tolong revisi anggaran.
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-emerald-100 border-2 border-emerald-500 p-4 rounded-xl flex items-start gap-3 animate-in zoom-in-95 duration-300">
+                              <IconCheckCircle className="text-emerald-600 shrink-0" size={28} />
+                              <div>
+                                <h4 className="font-black text-emerald-700 text-base uppercase tracking-wide">Aman Terkendali</h4>
+                                <p className="text-emerald-600 text-sm font-medium mt-0.5 leading-snug">
+                                  Harga usulan masih di bawah/sama dengan pagu maksimal SSH. Anda bisa lanjut.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL PIN ADMIN */}
+              {showPinModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowPinModal(false)}></div>
+                  <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl relative z-10 p-6 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <IconKeyRound size={18} className="text-blue-600" />
+                        Akses Admin
+                      </h3>
+                      <button onClick={() => setShowPinModal(false)} className="p-1.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200">
+                        <IconX size={18} />
+                      </button>
+                    </div>
+                    <p className="text-sm text-slate-600 mb-4">Masukkan PIN rahasia untuk mengupdate database Si-PAS.</p>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      autoFocus
+                      placeholder="****"
+                      value={pinInput}
+                      onChange={(e) => setPinInput(e.target.value)}
+                      className="w-full text-center tracking-[1em] text-2xl font-black py-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-blue-500 mb-4"
+                    />
+                    <button
+                      onClick={() => {
+                        if (pinInput === '0808') {
+                          setIsAdmin(true);
+                          setShowPinModal(false);
+                          setShowAdminPanel(true);
+                          setPinInput('');
+                        } else {
+                          setPinInput('');
+                        }
+                      }}
+                      className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all"
+                    >
+                      Buka Kunci
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL PENGATURAN ADMIN */}
+              {showAdminPanel && isAdmin && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowAdminPanel(false)}></div>
+                  <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 p-6 animate-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                        <IconSettings size={18} className="text-emerald-600" />
+                        Pengaturan Database
+                      </h3>
+                      <button onClick={() => setShowAdminPanel(false)} className="p-1.5 bg-slate-100 text-slate-500 rounded-full hover:bg-slate-200">
+                        <IconX size={18} />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Link CSV: SSH Umum</label>
+                        <input
+                          type="text"
+                          value={sourceUrls.ssh_umum}
+                          onChange={(e) => setSourceUrls({...sourceUrls, ssh_umum: e.target.value})}
+                          placeholder="Paste link CSV di sini..."
+                          className="w-full text-sm py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Link CSV: SSH PBJ</label>
+                        <input
+                          type="text"
+                          value={sourceUrls.ssh_pbj}
+                          onChange={(e) => setSourceUrls({...sourceUrls, ssh_pbj: e.target.value})}
+                          placeholder="Paste link CSV di sini..."
+                          className="w-full text-sm py-2 px-3 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        fetchSpreadsheetData(activeSource);
+                        setShowAdminPanel(false);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 active:scale-95 transition-all"
+                    >
+                      <IconRefreshCw size={18} />
+                      Simpan & Sync Database
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // Render Aplikasi
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
